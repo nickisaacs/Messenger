@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.format.DateUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,6 +19,7 @@ import java.util.List;
 
 import team5.bsec.messenger.R;
 import team5.bsec.messenger.adapters.RvConversationAdapter;
+import team5.bsec.messenger.entities.MsgObject;
 import team5.bsec.messenger.entities.MsgSnippet;
 import team5.bsec.messenger.items.DividerItemDecoration;
 
@@ -134,25 +136,38 @@ public class ConversationsFragment extends Fragment {
     }
 
     public void getMessages(Context context){
-        Uri uri = Uri.parse("content://mms-sms/conversations?simple=true");
-        String[] reqCols = new String[] { "_id","message_count", "snippet", "date"};
-        Cursor cursor = context.getContentResolver().query(uri, null, null, null, "date DESC");
+        Uri uri = Uri.parse("content://sms/conversations");
+       // String[] reqCols = new String[] { "_id","message_count", "snippet", "date"};
+        String[] reqCols = new String[] { "msg_count","thread_id", "snippet"};
+        Cursor cursor = context.getContentResolver().query(uri, reqCols
+                , null, null, "date DESC");
 
         if (cursor != null && cursor.getCount() > 0) {
 
+
+
+
             while (cursor.moveToNext()) {
 
-                String thread_id = cursor.getString(cursor.getColumnIndexOrThrow(reqCols[0]));
-                long dateInt = cursor.getLong(cursor.getColumnIndexOrThrow(reqCols[3]));
+                String thread_id = cursor.getString(cursor.getColumnIndexOrThrow(reqCols[1]));
+               // long dateInt = cursor.getLong(cursor.getColumnIndexOrThrow(reqCols[3]));
                 String snippet = cursor.getString(cursor.getColumnIndexOrThrow(reqCols[2]));
 
 
                 String args[] = {thread_id};
-                String address = getAddress(context, args);
+                MsgObject msgObject = getAddress(context,args);
+              //  String address = getAddress(context, args);
+                String address = msgObject.address;
+                long dateInt = 0;
+                if(msgObject.date != null)
+                    dateInt= Long.parseLong(msgObject.date);
                 String dateString = (DateUtils.getRelativeTimeSpanString(dateInt)).toString();
+
 
                 MsgSnippet msgSnippet = new MsgSnippet(address,snippet,dateString);
                 msgSnippetList.add(msgSnippet);
+
+               // break;
 
             }
         }
@@ -162,20 +177,24 @@ public class ConversationsFragment extends Fragment {
 
     }
 
-    public String getAddress(Context context,String[] args){
+    public MsgObject getAddress(Context context,String[] args){
         Uri uri = Uri.parse("content://sms");
-        String[] reqCols = new String[] { "_id","address"};
-        Cursor cursor = context.getContentResolver().query(uri, reqCols, "_id=?",args, null);
+        String[] reqCols = new String[] { "thread_id","address","date"};
+        Cursor cursor = context.getContentResolver().query(uri, reqCols, "thread_id=?",args, null);
         String address = "Unknown";
+        String date = null;
+        MsgObject msgObject;
         if (cursor != null && cursor.getCount() > 0) {
             while (cursor.moveToNext()) {
                 address = cursor.getString(cursor.getColumnIndexOrThrow(reqCols[1]));
+                date = cursor.getString(cursor.getColumnIndexOrThrow(reqCols[2]));
 
             }
         }
         cursor.close();
+        msgObject = new MsgObject(date,address);
 
-        return address;
+        return msgObject;
     }
 
 }
